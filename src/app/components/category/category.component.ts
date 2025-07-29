@@ -1,10 +1,11 @@
 import { Category } from './../../models/category.model';
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CategoryService } from '../../services/category.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { Subject, takeUntil } from 'rxjs';
 
 
 
@@ -15,7 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
   templateUrl: './category.component.html',
   styleUrl: './category.component.css'
 })
-export class CategoryComponent implements OnInit {
+export class CategoryComponent implements OnInit, OnDestroy {
 
   categoryList: Category[] = [];
   categoryType: string[] = ['income', 'expense']
@@ -23,6 +24,7 @@ export class CategoryComponent implements OnInit {
   showForm: boolean = false;
   selectedCategoryId: string | null = null;
   isEditCategory: boolean = false;
+  private destroy$ = new Subject<void>();
 
   toggleForm() {
     this.showForm = !this.showForm
@@ -47,7 +49,7 @@ export class CategoryComponent implements OnInit {
 
   //getAll Category
   getAllCategory() {
-    this.categoryService.getAllCategory().subscribe({
+    this.categoryService.getAllCategory().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: Category[] }) => {
         this.categoryList = res.data;
 
@@ -66,9 +68,10 @@ export class CategoryComponent implements OnInit {
   addCategory() {
     if (this.categoryForm.invalid) {
       this.categoryForm.markAllAsTouched();
+      this.snackbar.open('All Fields are Required', 'close', { duration: 3000 })
       return;
     }
-    this.categoryService.addCategory(this.categoryForm.value).subscribe({
+    this.categoryService.addCategory(this.categoryForm.value).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: Category) => {
         console.log('Category Details: ', res);
         this.snackbar.open('Category Add Success', 'close', { duration: 3000 });
@@ -95,7 +98,7 @@ export class CategoryComponent implements OnInit {
 
   //deleteCategory Byid
   deleteCategory(id: string) {
-    this.categoryService.deleteCategory(id).subscribe({
+    this.categoryService.deleteCategory(id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.snackbar.open('Category Delete Success', 'close', { duration: 3000 });
         this.categoryList = this.categoryList.filter(category => category._id !== id);
@@ -113,13 +116,14 @@ export class CategoryComponent implements OnInit {
   updateCategory() {
     if (this.categoryForm.invalid) {
       this.categoryForm.markAllAsTouched();
+      this.snackbar.open('All fields are required', 'close', { duration: 3000 })
       return;
     }
     const categoryUpdateDetails = {
       _id: this.selectedCategoryId,
       ...this.categoryForm.value
     };
-    this.categoryService.updateCategory(categoryUpdateDetails).subscribe({
+    this.categoryService.updateCategory(categoryUpdateDetails).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.snackbar.open('Category Updated Successfully', 'Close', { duration: 3000 });
         this.getAllCategory();
@@ -142,6 +146,11 @@ export class CategoryComponent implements OnInit {
     return this.categoryList.filter(category => category.type === 'expense')
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
 
   resetForm() {
     this.categoryForm.reset({
@@ -159,6 +168,5 @@ export class CategoryComponent implements OnInit {
   showError(message: string) {
     this.snackbar.open(message, 'Close', { duration: 2000 });
   }
-
 
 }

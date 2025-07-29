@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Account } from '../../models/account.model';
 import { AccountService } from '../../services/account.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -7,6 +7,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RecordListService } from '../../services/recordList.service';
 import { RecordList } from '../../models/recordlist.model';
+import { Subject, takeUntil } from 'rxjs';
 
 
 @Component({
@@ -16,7 +17,7 @@ import { RecordList } from '../../models/recordlist.model';
   styleUrl: './account.component.css'
 })
 
-export class AccountComponent implements OnInit {
+export class AccountComponent implements OnInit, OnDestroy{
   accountList: Account[] = [];
   recordList: RecordList[] = []
   addAccountForm: FormGroup;
@@ -26,7 +27,8 @@ export class AccountComponent implements OnInit {
   selectedAccountId: string | null = null;
   isEditAccount: boolean = false;
   accountId!: string;
-  recordId!: string
+  recordId!: string;
+  private destroy$ = new Subject<void>();
 
 
   constructor(private fb: FormBuilder,
@@ -48,7 +50,7 @@ export class AccountComponent implements OnInit {
 
 
   ngOnInit(): void {
-    this.accountService.getAllAccount().subscribe({
+    this.accountService.getAllAccount().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: Account[] }) => {
         this.accountList = res.data;
         this.route.queryParams.subscribe(params => {
@@ -99,7 +101,7 @@ export class AccountComponent implements OnInit {
 
   //fatch all accounts
   getAllAccount() {
-    this.accountService.getAllAccount().subscribe({
+    this.accountService.getAllAccount().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: Account[] }) => {
         this.accountList = res.data;
       },
@@ -114,9 +116,10 @@ export class AccountComponent implements OnInit {
   addNewAccount() {
     if (this.addAccountForm.invalid) {
       this.addAccountForm.markAllAsTouched();
+      this.showError('All fields are required');
       return;
     }
-    this.accountService.addAccount(this.addAccountForm.value).subscribe({
+    this.accountService.addAccount(this.addAccountForm.value).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.snackbar.open('Account Created SuccessFully.!', 'close', { duration: 3000 })
         this.resetForm();
@@ -132,7 +135,7 @@ export class AccountComponent implements OnInit {
 
   //delete Accounts
   deleteAccount(id: string) {
-    this.accountService.deleteAccount(id).subscribe({
+    this.accountService.deleteAccount(id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.snackbar.open('Account deleted SuccessFully.!', 'close', { duration: 3000 });
         this.accountList = this.accountList.filter(account => account._id !== id);
@@ -150,6 +153,7 @@ export class AccountComponent implements OnInit {
   amountTransfer() {
     if (this.transactionForm.invalid) {
       this.transactionForm.markAllAsTouched();
+      this.showError('All fields are required');
       return
     }
     const TransferAmountDetails = {
@@ -158,11 +162,12 @@ export class AccountComponent implements OnInit {
     }
 
     if (this.recordId) {
-      this.accountService.updateTransferAmount(TransferAmountDetails).subscribe({
+      this.accountService.updateTransferAmount(TransferAmountDetails).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.snackbar.open('Transfer Amount Details Updated SuccessFully.!', 'close', { duration: 3000 });
           this.resetForm();
-          this.router.navigate([], { queryParams: {} })
+          this.router.navigate([], { queryParams: {} });
+          this.getAllAccount();
         },
         error: (error) => {
           console.log(error);
@@ -241,6 +246,12 @@ export class AccountComponent implements OnInit {
   amountTransferForm() {
     this.transferForm = !this.transferForm
   }
+
+
+    ngOnDestroy(): void {
+  this.destroy$.next();
+  this.destroy$.complete();
+}
 
   closeForm() {
     this.router.navigate([], { queryParams: {} })

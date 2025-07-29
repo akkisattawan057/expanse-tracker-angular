@@ -5,8 +5,9 @@ import { BudgetService } from '../../services/budget.service';
 import { RecordList } from '../../models/recordlist.model';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Category } from '../../models/category.model';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Subject, takeUntil } from 'rxjs';
 
 
 @Component({
@@ -16,7 +17,7 @@ import { CommonModule } from '@angular/common';
   styleUrl: './budget.component.css',
 })
 
-export class BudgetComponent implements OnInit {
+export class BudgetComponent implements OnInit, OnDestroy {
   addBudgetForm: FormGroup;
   categoryList: Category[] = [];
   availbleCategoryList: Category[] = []
@@ -28,6 +29,7 @@ export class BudgetComponent implements OnInit {
   selectedBudgetId: string | null = null;
   showForm: boolean = false;
   isEditMode = false;
+    private destroy$ = new Subject<void>();
 
   formattedDate!: string
   selectedDate = new Date()
@@ -55,7 +57,7 @@ export class BudgetComponent implements OnInit {
 
   //fatch all available categories
   getAllCategory() {
-    this.categoryService.getAllCategory().subscribe({
+    this.categoryService.getAllCategory().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: Category[] }) => {
         this.categoryList = res.data;
         this.updateAvailableCategories();
@@ -69,7 +71,7 @@ export class BudgetComponent implements OnInit {
 
   //fatch all Records
   getAllRecords() {
-    this.recordListService.getAllRecord().subscribe({
+    this.recordListService.getAllRecord().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: RecordList[] }) => {
         this.recordList = res.data;
         this.getAllBudgetList();
@@ -84,7 +86,7 @@ export class BudgetComponent implements OnInit {
 
   //fatch all available budget category list
   getAllBudgetList() {
-    this.budgetService.getAllBudget().subscribe({
+    this.budgetService.getAllBudget().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: any) => {
         this.budgetList = res.data.map((budget: any) => {
           const spent = this.calculateSpentAmount(budget.category);
@@ -177,7 +179,7 @@ export class BudgetComponent implements OnInit {
       date: this.selectMonth,
     };
     if (this.isEditMode && this.selectedBudgetId) {
-      this.budgetService.updateBudget(selectedCategoryBudgetData).subscribe({
+      this.budgetService.updateBudget(selectedCategoryBudgetData).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.snackbar.open('Budget Updated Successfully', 'close', { duration: 3000 });
           this.getAllBudgetList();
@@ -189,7 +191,7 @@ export class BudgetComponent implements OnInit {
         },
       });
     } else {
-      this.budgetService.setNewBudget(selectedCategoryBudgetData).subscribe({
+      this.budgetService.setNewBudget(selectedCategoryBudgetData).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.snackbar.open('Budget Added Successfully', 'Close', { duration: 3000 });
           this.getAllBudgetList();
@@ -205,7 +207,7 @@ export class BudgetComponent implements OnInit {
 
   //delete Budget from busgetList
   deleteBudget(id: string) {
-    this.budgetService.deleteCategorySetBudget(id).subscribe({
+    this.budgetService.deleteCategorySetBudget(id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.snackbar.open('Budget Removed', 'Close', { duration: 3000 });
         this.budgetList = this.budgetList.filter((selectedBudget) => selectedBudget._id !== id);
@@ -265,6 +267,12 @@ export class BudgetComponent implements OnInit {
     this.selectedBudgetId = null;
     this.selectedCategoryId = null;
   }
+
+    ngOnDestroy(): void {
+  this.destroy$.next();
+  this.destroy$.complete();
+}
+
 
 
   //find total income and total expense used categories
