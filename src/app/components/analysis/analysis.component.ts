@@ -94,13 +94,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   fatchData() {
     this.recordService.getAllRecord().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: RecordList[] }) => {
-        this.recordList = res.data;
+        this.recordList = res?.data ?? [];
         this.accountService.getAllAccount().pipe(takeUntil(this.destroy$)).subscribe({
           next: (res: { data: Account[] }) => {
-            this.accountList = res.data;
+            this.accountList = res?.data ?? [];
             this.categoryService.getAllCategory().pipe(takeUntil(this.destroy$)).subscribe({
               next: (res: { data: Category[] }) => {
-                this.categoryList = res.data;
+                this.categoryList = res?.data ?? [];
                 this.onMonthChange();
               },
               error: (error) => {

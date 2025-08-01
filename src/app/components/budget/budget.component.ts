@@ -8,6 +8,8 @@ import { Category } from '../../models/category.model';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 
 
 @Component({
@@ -38,6 +40,7 @@ export class BudgetComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private snackbar: MatSnackBar,
+    private dialog: MatDialog,
     private categoryService: CategoryService,
     private budgetService: BudgetService,
     private recordListService: RecordListService
@@ -59,21 +62,22 @@ export class BudgetComponent implements OnInit, OnDestroy {
   getAllCategory() {
     this.categoryService.getAllCategory().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: Category[] }) => {
-        this.categoryList = res.data;
+        this.categoryList = res?.data ?? [];
         this.updateAvailableCategories();
       },
       error: (err) => {
         console.error(err);
-        this.showError('Failed to fetch categories');
+        this.showError('Unable to fetch categories');
       },
     });
   }
+  
 
   //fatch all Records
   getAllRecords() {
     this.recordListService.getAllRecord().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: RecordList[] }) => {
-        this.recordList = res.data;
+        this.recordList = res?.data?? [];
         this.getAllBudgetList();
       },
       error: (err) => {
@@ -88,7 +92,8 @@ export class BudgetComponent implements OnInit, OnDestroy {
   getAllBudgetList() {
     this.budgetService.getAllBudget().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: any) => {
-        this.budgetList = res.data.map((budget: any) => {
+        const budgetData = res?.data?? [];
+        this.budgetList = budgetData.map((budget: any) => {
           const spent = this.calculateSpentAmount(budget.category);
           return {
             ...budget,
@@ -100,6 +105,7 @@ export class BudgetComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error(err);
+        this.showError('Unable to Fatch budget')
       },
     });
   }
@@ -203,6 +209,15 @@ export class BudgetComponent implements OnInit, OnDestroy {
         },
       });
     }
+  }
+  //
+  openConfirmDialog(id: string): void {
+    const dialog= this.dialog.open(ConfirmDialogComponent);
+    dialog.afterClosed().subscribe((data) => {
+      if (data === true) {
+        this.deleteBudget(id);
+      }
+    });
   }
 
   //delete Budget from busgetList

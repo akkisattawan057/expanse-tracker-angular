@@ -25,14 +25,13 @@ export class LogActivityComponent implements OnInit, OnDestroy {
   getAllLogs() {
     this.logService.getAllLogs().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: Log[] }) => {
-        this.logList = res.data;
+        this.logList = res?.data?? [];
         this.filteredLoglist = [...this.logList],
           this.groupedLogsByDate();
       },
       error: (err) => {
         console.error('Failed to fetch logs:', err);
-        const errorMessage = err?.error?.messgae || 'logs not Found..'
-        this.snackbar.open(errorMessage, 'close', { duration: 2000 })
+        this.snackbar.open('logs not Found', 'close', { duration: 2000 })
       }
     });
   }

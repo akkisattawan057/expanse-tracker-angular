@@ -20,7 +20,7 @@
                     <button class="btn btn-sm btn-outline-primary" (click)="editCategoryById(category)">
                       <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" (click)="deleteCategory(category._id)">
+                    <button class="btn btn-sm btn-outline-danger" (click)="openConfirmDialog(category._id)">
                       <i class="fas fa-trash"></i>
                     </button>
                   </div>
@@ -48,7 +48,7 @@
                     <button class="btn btn-sm btn-outline-primary" (click)="editCategoryById(category)">
                       <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" (click)="deleteCategory(category._id)">
+                    <button class="btn btn-sm btn-outline-danger" (click)="openConfirmDialog(category._id)">
                       <i class="fas fa-trash"></i>
                     </button>
                   </div>
@@ -66,7 +66,7 @@
 
   <!-- If both income and expense categories are empty -->
   <ng-template #noCategory>
-    <div class="alert-message text-center">No Categories Found.</div>
+    <div class="alert-message">Categories not Available.</div>
   </ng-template>
 </div>
 

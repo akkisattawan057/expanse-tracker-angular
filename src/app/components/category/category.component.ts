@@ -6,6 +6,9 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { Subject, takeUntil } from 'rxjs';
+import { Dialog } from '@angular/cdk/dialog';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 
 
 
@@ -34,7 +37,10 @@ export class CategoryComponent implements OnInit, OnDestroy {
     this.showForm = false;
     this.resetForm();
   }
-  constructor(private fb: FormBuilder, private categoryService: CategoryService, private snackbar: MatSnackBar) {
+  constructor(private fb: FormBuilder,
+    private dialog: MatDialog,
+     private categoryService: CategoryService,
+      private snackbar: MatSnackBar) {
     this.categoryForm = this.fb.group({
       name: ['', [Validators.required]],
       type: ['', [Validators.required]],
@@ -51,17 +57,14 @@ export class CategoryComponent implements OnInit, OnDestroy {
   getAllCategory() {
     this.categoryService.getAllCategory().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: Category[] }) => {
-        this.categoryList = res.data;
-
+        this.categoryList = res?.data ?? [];
       },
       error: (error) => {
-        const errorMessage = error?.error?.message || 'Failed to Fatcah categories';
-        this.showError(errorMessage);
+        this.showError('Failed to Fatcah categories');
         console.error(error);
       }
     })
   }
-
 
 
   //addnew category
@@ -73,14 +76,14 @@ export class CategoryComponent implements OnInit, OnDestroy {
     }
     this.categoryService.addCategory(this.categoryForm.value).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: Category) => {
-        console.log('Category Details: ', res);
         this.snackbar.open('Category Add Success', 'close', { duration: 3000 });
         this.getAllCategory();
         this.resetForm();
       },
       error: (error) => {
         console.log(error);
-        this.showError('Create Category Failed.!')
+        this.showError('Unable to create category.'
+)
       }
     })
   }
@@ -96,6 +99,15 @@ export class CategoryComponent implements OnInit, OnDestroy {
     });
   }
 
+openConfirmDialog(id: string): void {
+  const dialog= this.dialog.open(ConfirmDialogComponent);
+  dialog.afterClosed().subscribe((data) => {
+    if (data === true) {
+      this.deleteCategory(id);
+    }
+  });
+}
+
   //deleteCategory Byid
   deleteCategory(id: string) {
     this.categoryService.deleteCategory(id).pipe(takeUntil(this.destroy$)).subscribe({
@@ -106,8 +118,7 @@ export class CategoryComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.log(error);
-        const errorMessage = error?.error?.message || 'Failed to Delete Category';
-        this.showError(errorMessage);
+        this.showError('Failed to Delete Category');
       }
     })
   }
@@ -131,8 +142,7 @@ export class CategoryComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error(error);
-        const errorMessage = error?.error?.message || 'Failed to update category';
-        this.showError(errorMessage);
+        this.showError('Failed to update category.');
       }
     });
   }

@@ -8,6 +8,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { RecordListService } from '../../services/recordList.service';
 import { RecordList } from '../../models/recordlist.model';
 import { Subject, takeUntil } from 'rxjs';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 
 
 @Component({
@@ -17,7 +19,7 @@ import { Subject, takeUntil } from 'rxjs';
   styleUrl: './account.component.css'
 })
 
-export class AccountComponent implements OnInit, OnDestroy{
+export class AccountComponent implements OnInit, OnDestroy {
   accountList: Account[] = [];
   recordList: RecordList[] = []
   addAccountForm: FormGroup;
@@ -35,6 +37,7 @@ export class AccountComponent implements OnInit, OnDestroy{
     private accountService: AccountService,
     private recordService: RecordListService,
     private snackbar: MatSnackBar,
+    private dialog: MatDialog,
     private route: ActivatedRoute,
     private router: Router) {
     this.addAccountForm = this.fb.group({
@@ -44,7 +47,7 @@ export class AccountComponent implements OnInit, OnDestroy{
       this.transactionForm = fb.group({
         fromAccountId: ['', [Validators.required]],
         toAccountId: ['', Validators.required],
-        amount: [null, Validators.required]
+        amount: [null, Validators.required, Validators.min(1)]
       })
   }
 
@@ -52,7 +55,7 @@ export class AccountComponent implements OnInit, OnDestroy{
   ngOnInit(): void {
     this.accountService.getAllAccount().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: Account[] }) => {
-        this.accountList = res.data;
+        this.accountList = res?.data ?? [];
         this.route.queryParams.subscribe(params => {
           this.accountId = params['accountId'];
           this.recordId = params['recordId'];
@@ -84,8 +87,9 @@ export class AccountComponent implements OnInit, OnDestroy{
                 }
               },
               error: (error) => {
-                const errorMessage = error?.error?.message || 'Failed To Fetch Transfer Record';
-                this.snackbar.open(errorMessage, 'close', { duration: 3000 });
+                console.log(error);
+               this.showError('Failed To Fetch Transfer Record');
+               
               }
             });
           }
@@ -93,9 +97,10 @@ export class AccountComponent implements OnInit, OnDestroy{
       },
       error: (error) => {
         console.error(error);
-        this.showError('Failed to fetch account');
+        this.showError('Failed to fetch accounts');
       }
     });
+ 
   }
 
 
@@ -103,14 +108,14 @@ export class AccountComponent implements OnInit, OnDestroy{
   getAllAccount() {
     this.accountService.getAllAccount().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: Account[] }) => {
-        this.accountList = res.data;
+        this.accountList = res?.data ?? [];
       },
       error: (error) => {
         console.error(error);
-        this.showError('No Account Found...');
       }
     });
   }
+
 
   //crete New account
   addNewAccount() {
@@ -132,7 +137,14 @@ export class AccountComponent implements OnInit, OnDestroy{
     })
   }
 
-
+openConfirmDialog(id: string): void {
+  const dialog= this.dialog.open(ConfirmDialogComponent);
+  dialog.afterClosed().subscribe((data) => {
+    if (data === true) {
+      this.deleteAccount(id);
+    }
+  });
+}
   //delete Accounts
   deleteAccount(id: string) {
     this.accountService.deleteAccount(id).pipe(takeUntil(this.destroy$)).subscribe({
@@ -179,14 +191,15 @@ export class AccountComponent implements OnInit, OnDestroy{
     else {
       this.accountService.amountTransfer(this.transactionForm.value).subscribe({
         next: () => {
-          this.snackbar.open('Amount Transfer Success', 'close', { duration: 3000 });
+          this.snackbar.open('Amount Transfered Successfully', 'close', { duration: 3000 });
           this.getAllAccount();
           this.resetForm()
 
         },
         error: (error) => {
           console.log(error);
-          this.showError('Failed Amount Transfer')
+          const errorMessage = error?.error?.message || 'Failed Amount Transfer';
+          this.showError(errorMessage);
         }
       })
 
@@ -203,10 +216,10 @@ export class AccountComponent implements OnInit, OnDestroy{
     this.showForm = true;
     this.addAccountForm.patchValue({
       name: account.name,
-      amount: account.amount,
+      amount: account.recordId ? account.recordId.amount : 0,
     });
+    this.recordId = account.recordId?._id;
   }
-
 
   //updated account Created with initial amount
   updateAccount() {
@@ -222,7 +235,7 @@ export class AccountComponent implements OnInit, OnDestroy{
     };
     this.accountService.updateAccount(accountUpdateDetails).subscribe({
       next: () => {
-        this.snackbar.open('Account or Transaction updated successfully', 'Close', { duration: 3000 });
+        this.snackbar.open('Account updated successfully', 'Close', { duration: 3000 });
         this.resetForm();
         this.getAllAccount();
       },
@@ -243,15 +256,18 @@ export class AccountComponent implements OnInit, OnDestroy{
     this.showForm = !this.showForm
   }
 
-  amountTransferForm() {
-    this.transferForm = !this.transferForm
+ amountTransferForm(): void {
+    this.getAllAccount(); 
+    this.transactionForm.reset();
+    this.transactionForm.patchValue({ fromAccountId: '', toAccountId: '' });
+    this.transferForm = true;
   }
 
 
-    ngOnDestroy(): void {
-  this.destroy$.next();
-  this.destroy$.complete();
-}
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   closeForm() {
     this.router.navigate([], { queryParams: {} })
@@ -266,8 +282,11 @@ export class AccountComponent implements OnInit, OnDestroy{
     this.selectedAccountId = null;
     this.transactionForm.reset();
     this.transferForm = false;
+    this.accountId = '';
+    this.recordId ='';
 
   }
+  
 
   get form() {
     return this.addAccountForm.controls;

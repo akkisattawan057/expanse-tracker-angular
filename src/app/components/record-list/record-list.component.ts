@@ -15,6 +15,8 @@ import { MatTimepickerModule } from '@angular/material/timepicker';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
 import { Subject, takeUntil } from 'rxjs';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 
 
 
@@ -43,14 +45,15 @@ export class RecordListComponent implements OnInit, OnDestroy {
 
   constructor(private fb: FormBuilder,
     private router: Router,
+    private dialog: MatDialog,
     private recordService: RecordListService,
     private categoryService: CategoryService,
     private accountService: AccountService,
     private snackbar: MatSnackBar) {
     this.recordListForm = this.fb.group({
-      amount: [null, [Validators.required]],
+      amount: [null,  [Validators.required, Validators.min(1)]],
       type: ['', [Validators.required]],
-      addNote: ['', [Validators.required]],
+      addNote: [''],
       category: ['', [Validators.required]],
       account: ['', [Validators.required]],
       date: [this.selectedDate]
@@ -85,7 +88,7 @@ export class RecordListComponent implements OnInit, OnDestroy {
   getAllAccount() {
     this.accountService.getAllAccount().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: Account[] }) => {
-        this.accountList = res.data;
+        this.accountList = res?.data ?? [];
       },
       error: (error) => {
         console.error(error);
@@ -99,7 +102,7 @@ export class RecordListComponent implements OnInit, OnDestroy {
   getAllCategories() {
     this.categoryService.getAllCategory().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: Category[] }) => {
-        this.categoryList = res.data;
+        this.categoryList = res?.data ?? [];
         this.incomeCategoryList = this.categoryList.filter(category => category.type === 'income');
         this.expenseCategoryList = this.categoryList.filter(category => category.type === 'expense')
       },
@@ -130,7 +133,7 @@ export class RecordListComponent implements OnInit, OnDestroy {
   getAllRecord() {
     this.recordService.getAllRecord().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: { data: RecordList[] }) => {
-        this.recordList = res.data;
+        this.recordList = res?.data ?? [];
         this.onMonthChange();
       },
       error: (error) => {
@@ -188,6 +191,10 @@ export class RecordListComponent implements OnInit, OnDestroy {
 
   //add new Record
   addNewRecord() {
+    if(this.recordListForm.invalid) {
+      this.recordListForm.markAllAsTouched();
+      return;
+    }
     this.recordService.addNewRecord(this.recordListForm.value).subscribe({
       next: () => {
         this.snackbar.open('Record Added Successfully.', 'close', { duration: 3000 });
@@ -202,6 +209,14 @@ export class RecordListComponent implements OnInit, OnDestroy {
     })
   }
 
+  openConfirmDialog(id: string): void {
+    const dialog= this.dialog.open(ConfirmDialogComponent);
+    dialog.afterClosed().subscribe((data) => {
+      if (data === true) {
+        this.deleteRecord(id);
+      }
+    });
+  }
   //delete Recordby recordId
   deleteRecord(id: string) {
     this.recordService.deleteRecord(id).subscribe({
@@ -239,13 +254,17 @@ export class RecordListComponent implements OnInit, OnDestroy {
 
   //update SelectedRecord
   updateRecord() {
+     if(this.recordListForm.invalid) {
+      this.recordListForm.markAllAsTouched();
+      return;
+    }
     const updateRecordDetails = {
       _id: this.selectedRecordId,
       ...this.recordListForm.value
     }
     this.recordService.updateRecord(updateRecordDetails).subscribe({
       next: () => {
-        this.snackbar.open('Record Update Success', 'close', { duration: 3000 });
+        this.snackbar.open('Record Updated SuccessFully', 'close', { duration: 3000 });
         this.resetForm();
         this.getAllRecord();
         this.getAllAccount();
@@ -253,7 +272,7 @@ export class RecordListComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error(err);
-        this.showError('Update Failed')
+        this.showError('Record update Failed.')
       }
     })
   }

@@ -40,7 +40,7 @@
                     <div class="btns-box">
                         <button class="btn btn-sm btn-outline-primary m-2"
                             (click)="editCategoryBudget(categoryBudget)"><i class="fas fa-edit"></i> </button>
-                        <button class="btn btn-sm btn-outline-danger" (click)="deleteBudget(categoryBudget._id)"> <i
+                        <button class="btn btn-sm btn-outline-danger" (click)="openConfirmDialog(categoryBudget._id)"> <i
                                 class="fas fa-trash-alt"></i></button>
                     </div>
                 </div>
@@ -76,14 +76,15 @@
                         </tbody>
                     </table>
                     <ng-template #nodata>
-                        <div class="alert alert-warning mt-3">No more categories Available .</div>
-                    </ng-template>
+                        <div class="alert-message">No more categories Available.</div>
+                    </ng-template>  
                 </div>
             </div>
-            <ng-template #noCategory>
-                <div class="alert alert-warning mt-3">No categories found.</div>
-            </ng-template>
+           
         </div>
+         <ng-template #noCategory>
+                <div class="alert-message">No categories found.</div> 
+            </ng-template>
     </div>
 
 
